@@ -18,6 +18,12 @@ add_library(MPAGSCipher STATIC
   TransformChar.cpp
   VigenereCipher.hpp
   VigenereCipher.cpp
+  MissingArgument.hpp
+  MissingArgument.cpp
+  UnknownArgument.hpp
+  UnknownArgument.cpp
+  InvalidKey.hpp
+  InvalidKey.cpp
   )
 
 target_include_directories(MPAGSCipher

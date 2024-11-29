@@ -3,29 +3,45 @@
 #include "CipherType.hpp"
 #include "ProcessCommandLine.hpp"
 #include "TransformChar.hpp"
+#include "MissingArgument.hpp"
+#include "UnknownArgument.hpp"
+#include "InvalidKey.hpp"
+
+
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <future>
+#include <thread>
+#include <chrono>
 
 int main(int argc, char* argv[])
 {
     // Convert the command-line arguments into a more easily usable form
     const std::vector<std::string> cmdLineArgs{argv, argv + argc};
 
-    // Options that might be set by the command-line arguments
-    ProgramSettings settings{false, false, "", "", {}, {}, CipherMode::Encrypt};
+    
+    ProgramSettings settings;
 
     // Process command line arguments
-    const bool cmdLineStatus{processCommandLine(cmdLineArgs, settings)};
-
-    // Any failure in the argument processing means we can't continue
-    // Use a non-zero return value to indicate failure
-    if (!cmdLineStatus) {
+    //const bool cmdLineStatus{processCommandLine(cmdLineArgs, settings)};
+    try{
+        settings = processCommandLine(cmdLineArgs);
+    } catch (const MissingArgument& e) {
+        std::cerr << "[error] Missing argument: " << e.what() << std::endl;
+        return 1;
+    } catch (const UnknownArgument& e) {
+        std::cerr << "[error] Unknown argument: " << e.what() << std::endl;
+        return 1;
+    } catch (const InvalidKey& e) {
+        std::cerr << "[error] Invalid Key: " << e.what() << std::endl;
         return 1;
     }
+
+    
 
     // Handle help, if requested
     if (settings.helpRequested) {
@@ -95,8 +111,15 @@ int main(int argc, char* argv[])
     std::size_t nCiphers{settings.cipherType.size()};
     ciphers.reserve(nCiphers);
     for (std::size_t iCipher{0}; iCipher < nCiphers; ++iCipher) {
-        ciphers.push_back(CipherFactory::makeCipher(
+
+        try{
+            ciphers.push_back(CipherFactory::makeCipher(
             settings.cipherType[iCipher], settings.cipherKey[iCipher]));
+
+        } catch (const InvalidKey& e) {
+            std::cerr << "[error] Invalid Key: " << e.what() << std::endl;
+            return 1;
+        }
 
         // Check that the cipher was constructed successfully
         if (!ciphers.back()) {
@@ -113,6 +136,8 @@ int main(int argc, char* argv[])
 
     // Run the cipher(s) on the input text, specifying whether to encrypt/decrypt
     for (const auto& cipher : ciphers) {
+        // add in here an if statement to look for CaesarCipher
+        // if we are using the CaesarCipher - add threading to implementation?
         cipherText = cipher->applyCipher(cipherText, settings.cipherMode);
     }
 
